@@ -1,0 +1,89 @@
+service: sls-poc-943-auth
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: eu-west-2
+  environment:
+    DYNAMODB_TABLE: 'sls-poc-auth-943-users'
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+functions:
+  create:
+    handler: user/register.register
+    events:
+      - http:
+          path: user
+          method: post
+          cors: true
+
+  list:
+    handler: user/list.list
+    events:
+      - http:
+          path: user
+          method: get
+          cors: true
+        
+  get:
+    handler: user/login.login
+    events:
+      - http:
+          path: user/login/{id}
+          method: get
+          cors: true
+        
+  update:
+    handler: user/update.update
+    events:
+      - http:
+          path: user/{id}
+          method: put
+          cors: true
+          
+  getUser:
+    handler: user/get.get
+    events:
+      - http:
+          path: user/{id}
+          method: get
+          cors: true
+  delete:
+    handler: user/delete.delete
+    events:
+      - http:
+          path: user/{id}
+          method: delete
+          cors: true        
+
+resources:
+  Resources:
+    usersDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
